@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/Sec460_Hub/static/css/main.7c383747.css",
+    "main.js": "/Sec460_Hub/static/js/main.fc51ecf7.js",
+    "index.html": "/Sec460_Hub/index.html",
+    "main.7c383747.css.map": "/Sec460_Hub/static/css/main.7c383747.css.map",
+    "main.fc51ecf7.js.map": "/Sec460_Hub/static/js/main.fc51ecf7.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7c383747.css",
+    "static/js/main.fc51ecf7.js"
+  ]
+}
