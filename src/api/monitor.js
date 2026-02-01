@@ -1,4 +1,5 @@
 import { getToken } from "../auth/token";
+import { API_BASE_URL } from "../config";
 
 function authHeaders() {
     const token = getToken();
@@ -9,7 +10,7 @@ function authHeaders() {
 }
 
 export async function getAllChats() {
-    const res = await fetch("/api/v1/monitor/chats", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/monitor/chats`, {
         headers: authHeaders(),
     });
     const data = await res.json();
@@ -18,7 +19,7 @@ export async function getAllChats() {
 }
 
 export async function getChatMessages(type, id) {
-    const res = await fetch(`/api/v1/monitor/chats/${type}/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/monitor/chats/${type}/${id}`, {
         headers: authHeaders(),
     });
     const data = await res.json();

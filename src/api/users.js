@@ -1,4 +1,5 @@
 import { getToken } from "../auth/token";
+import { API_BASE_URL } from "../config";
 
 function authHeaders() {
     const token = getToken();
@@ -9,7 +10,7 @@ function authHeaders() {
 }
 
 export async function getAllUsers() {
-    const res = await fetch("/api/v1/users", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users`, {
         headers: authHeaders(),
     });
     const data = await res.json();
@@ -18,7 +19,7 @@ export async function getAllUsers() {
 }
 
 export async function setUserAdminStatus(userId, isAdmin) {
-    const res = await fetch("/api/v1/users/admin", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users/admin`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -32,7 +33,7 @@ export async function setUserAdminStatus(userId, isAdmin) {
 }
 
 export async function setUserActiveStatus(userId, isActive) {
-    const res = await fetch("/api/v1/users/active", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users/active`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -47,7 +48,7 @@ export async function setUserActiveStatus(userId, isActive) {
 
 
 export async function setMyAlias(alias) {
-    const res = await fetch("/api/v1/users/me/alias", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users/me/alias`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

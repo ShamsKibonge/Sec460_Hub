@@ -237,7 +237,7 @@ export default function Groups() {
                         <div className="flex flex-wrap gap-2">
                             <input
                                 className="flex-1 rounded-lg border px-3 py-2 text-sm"
-                                placeholder="person@sofkam.com"
+                                placeholder="person@example.com"
                                 value={memberEmail}
                                 onChange={(e) => setMemberEmail(e.target.value)}
                             />

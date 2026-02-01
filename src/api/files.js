@@ -1,4 +1,5 @@
 import { getToken } from "../auth/token";
+import { API_BASE_URL } from "../config";
 
 function authHeaders() {
     const token = getToken();
@@ -6,14 +7,14 @@ function authHeaders() {
 }
 
 export async function listGroupFiles(groupId) {
-    const res = await fetch(`/api/v1/files/groups/${groupId}`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE_URL}/api/v1/files/groups/${groupId}`, { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to load files");
     return data.files;
 }
 
 export async function listThreadFiles(threadId) {
-    const res = await fetch(`/api/v1/files/direct/${threadId}`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE_URL}/api/v1/files/direct/${threadId}`, { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to load files");
     return data.files;
@@ -23,7 +24,7 @@ export async function uploadGroupFile(groupId, file) {
     const fd = new FormData();
     fd.append("file", file);
 
-    const res = await fetch(`/api/v1/files/groups/${groupId}/upload`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/files/groups/${groupId}/upload`, {
         method: "POST",
         headers: authHeaders(),
         body: fd,
@@ -38,7 +39,7 @@ export async function uploadThreadFile(threadId, file) {
     const fd = new FormData();
     fd.append("file", file);
 
-    const res = await fetch(`/api/v1/files/direct/${threadId}/upload`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/files/direct/${threadId}/upload`, {
         method: "POST",
         headers: authHeaders(),
         body: fd,
@@ -50,11 +51,11 @@ export async function uploadThreadFile(threadId, file) {
 }
 
 export function downloadUrl(fileId) {
-    return `/api/v1/files/${fileId}/download`;
+    return `${API_BASE_URL}/api/v1/files/${fileId}/download`;
 }
 
 export async function downloadFile(fileId) {
-    const res = await fetch(`/api/v1/files/${fileId}/download`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/files/${fileId}/download`, {
         headers: authHeaders(),
     });
 
@@ -71,7 +72,7 @@ export async function downloadFile(fileId) {
 }
 
 export async function fetchFileBlob(fileId) {
-    const res = await fetch(`/api/v1/files/${fileId}/download`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/files/${fileId}/download`, {
         headers: authHeaders(),
     });
 
@@ -86,4 +87,3 @@ export async function fetchFileBlob(fileId) {
 
     return res.blob();
 }
-

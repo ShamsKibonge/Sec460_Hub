@@ -1,7 +1,8 @@
 import { getToken } from "../auth/token";
+import { API_BASE_URL } from "../config";
 
 export async function requestCode(email) {
-    const res = await fetch("/api/v1/auth/request-code", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/request-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -12,7 +13,7 @@ export async function requestCode(email) {
 }
 
 export async function verifyCode(email, code) {
-    const res = await fetch("/api/v1/auth/verify-code", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/verify-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
@@ -27,7 +28,7 @@ export async function logout() {
     if (!token) return;
 
     try {
-        const res = await fetch("/api/v1/auth/logout", {
+        const res = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

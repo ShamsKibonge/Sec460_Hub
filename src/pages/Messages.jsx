@@ -709,7 +709,7 @@ export default function Messages() {
                         <div className="flex flex-wrap gap-2">
                             <input
                                 className="flex-1 rounded-lg border px-3 py-2 text-sm"
-                                placeholder="person@sofkam.com"
+                                placeholder="person@example.com"
                                 value={toEmail}
                                 onChange={(e) => setToEmail(e.target.value)}
                             />
@@ -836,8 +836,8 @@ export default function Messages() {
                                                     <div className="max-w-[80%] rounded-xl border bg-white px-3 py-2 text-sm">
                                                         <div
                                                             className={`text-xs ${mine
-                                                                    ? "text-right text-gray-500"
-                                                                    : "text-gray-500"
+                                                                ? "text-right text-gray-500"
+                                                                : "text-gray-500"
                                                                 }`}
                                                         >
                                                             {senderName}
@@ -904,8 +904,8 @@ export default function Messages() {
                                                     <div className="max-w-[80%] rounded-xl border bg-white px-3 py-2 text-sm">
                                                         <div
                                                             className={`text-xs ${mine
-                                                                    ? "text-right text-gray-500"
-                                                                    : "text-gray-500"
+                                                                ? "text-right text-gray-500"
+                                                                : "text-gray-500"
                                                                 }`}
                                                         >
                                                             {senderName}
@@ -983,80 +983,80 @@ export default function Messages() {
                             </button>
                         </div>
 
-                                                <div className="max-h-[70vh] overflow-auto p-4">
-                                                    {historyErr && (
-                                                        <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
-                                                            {historyErr}
-                                                        </div>
-                                                    )}
-                        
-                                                    <div className="mb-3">
-                                                        <input
-                                                            type="text"
-                                                            className="w-full rounded-lg border px-3 py-2 text-sm"
-                                                            placeholder="Search files history..."
-                                                            value={filesHistoryQ}
-                                                            onChange={(e) => setFilesHistoryQ(e.target.value)}
-                                                        />
+                        <div className="max-h-[70vh] overflow-auto p-4">
+                            {historyErr && (
+                                <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
+                                    {historyErr}
+                                </div>
+                            )}
+
+                            <div className="mb-3">
+                                <input
+                                    type="text"
+                                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                                    placeholder="Search files history..."
+                                    value={filesHistoryQ}
+                                    onChange={(e) => setFilesHistoryQ(e.target.value)}
+                                />
+                            </div>
+
+                            {loadingHistory ? (
+                                <div className="text-sm text-gray-600">Loading files…</div>
+                            ) : filesHistory.length === 0 ? (
+                                <div className="text-sm text-gray-600">No files yet.</div>
+                            ) : (
+                                <ul className="space-y-2">
+                                    {filesHistory
+                                        .filter((f) =>
+                                            f.originalName
+                                                .toLowerCase()
+                                                .includes(filesHistoryQ.toLowerCase())
+                                        )
+                                        .map((f) => (
+                                            <li
+                                                key={f.id}
+                                                className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
+                                            >
+                                                <div className="min-w-0">
+                                                    <div className="truncate text-sm font-medium">
+                                                        📎 {f.originalName}
                                                     </div>
-                        
-                                                    {loadingHistory ? (
-                                                        <div className="text-sm text-gray-600">Loading files…</div>
-                                                    ) : filesHistory.length === 0 ? (
-                                                        <div className="text-sm text-gray-600">No files yet.</div>
-                                                    ) : (
-                                                        <ul className="space-y-2">
-                                                            {filesHistory
-                                                                .filter((f) =>
-                                                                    f.originalName
-                                                                        .toLowerCase()
-                                                                        .includes(filesHistoryQ.toLowerCase())
-                                                                )
-                                                                .map((f) => (
-                                                                    <li
-                                                                        key={f.id}
-                                                                        className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
-                                                                    >
-                                                                        <div className="min-w-0">
-                                                                            <div className="truncate text-sm font-medium">
-                                                                                📎 {f.originalName}
-                                                                            </div>
-                        
-                                                                            <div className="text-xs text-gray-500">
-                                                                                {(f.uploader?.alias || f.uploader?.email || "Unknown")} •{" "}
-                                                                                {(f.size / 1024).toFixed(1)} KB
-                                                                            </div>
-                        
-                                                                            <div className="text-[11px] text-gray-400">
-                                                                                Shared: {new Date(f.sharedAt || f.createdAt).toLocaleString()}
-                                                                            </div>
-                                                                        </div>
-                        
-                                                                        <div className="flex flex-col gap-2">
-                                                                            {((f.mimeType || "").startsWith("image/") || f.mimeType === "application/pdf") && (
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => onPreview(f.id, f.originalName, f.mimeType)}
-                                                                                    className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
-                                                                                >
-                                                                                    Preview
-                                                                                </button>
-                                                                            )}
-                        
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => onDownload(f.id, f.originalName)}
-                                                                                className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
-                                                                            >
-                                                                                Download
-                                                                            </button>
-                                                                        </div>
-                        
-                                                                    </li>
-                                                                ))}
-                                                        </ul>
+
+                                                    <div className="text-xs text-gray-500">
+                                                        {(f.uploader?.alias || f.uploader?.email || "Unknown")} •{" "}
+                                                        {(f.size / 1024).toFixed(1)} KB
+                                                    </div>
+
+                                                    <div className="text-[11px] text-gray-400">
+                                                        Shared: {new Date(f.sharedAt || f.createdAt).toLocaleString()}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col gap-2">
+                                                    {((f.mimeType || "").startsWith("image/") || f.mimeType === "application/pdf") && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onPreview(f.id, f.originalName, f.mimeType)}
+                                                            className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+                                                        >
+                                                            Preview
+                                                        </button>
                                                     )}
-                                                </div>                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onDownload(f.id, f.originalName)}
+                                                        className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+                                                    >
+                                                        Download
+                                                    </button>
+                                                </div>
+
+                                            </li>
+                                        ))}
+                                </ul>
+                            )}
+                        </div>                    </div>
                 </div>
             )}
 

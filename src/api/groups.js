@@ -1,4 +1,5 @@
 import { getToken } from "../auth/token";
+import { API_BASE_URL } from "../config";
 
 function authHeaders() {
     const token = getToken();
@@ -6,14 +7,14 @@ function authHeaders() {
 }
 
 export async function listMyGroups() {
-    const res = await fetch("/api/v1/groups", { headers: authHeaders() });
+    const res = await fetch(`${API_BASE_URL}/api/v1/groups`, { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to load groups");
     return data.groups;
 }
 
 export async function createGroup(name) {
-    const res = await fetch("/api/v1/groups", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/groups`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -24,7 +25,7 @@ export async function createGroup(name) {
 }
 
 export async function listMembers(groupId) {
-    const res = await fetch(`/api/v1/groups/${groupId}/members`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/groups/${groupId}/members`, {
         headers: authHeaders(),
     });
     const data = await res.json();
@@ -33,7 +34,7 @@ export async function listMembers(groupId) {
 }
 
 export async function addMember(groupId, email) {
-    const res = await fetch(`/api/v1/groups/${groupId}/members`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/groups/${groupId}/members`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

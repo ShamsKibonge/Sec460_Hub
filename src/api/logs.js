@@ -1,4 +1,5 @@
 import { getToken } from "../auth/token";
+import { API_BASE_URL } from "../config";
 
 function authHeaders() {
     const token = getToken();
@@ -9,7 +10,7 @@ function authHeaders() {
 }
 
 export async function getLogs() {
-    const res = await fetch("/api/v1/logs", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/logs`, {
         headers: authHeaders(),
     });
     const data = await res.json();

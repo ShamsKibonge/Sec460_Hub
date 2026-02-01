@@ -1,8 +1,9 @@
 import { getToken } from "../auth/token";
+import { API_BASE_URL } from "../config";
 
 export async function getMe() {
     const token = getToken();
-    const res = await fetch("/api/v1/users/me", {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users/me`, {
         headers: {
             Authorization: `Bearer ${token}`,
         },

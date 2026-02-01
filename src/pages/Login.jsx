@@ -57,7 +57,7 @@ export default function Login() {
             <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-sm">
                 <h1 className="text-2xl font-bold">Sign in</h1>
                 <p className="mt-1 text-sm text-gray-600">
-                    Use your <b>@sofkam.com</b> email to receive a login code.
+                    Enter your email address to receive a login code.
                 </p>
 
                 {msg && (
@@ -76,7 +76,7 @@ export default function Login() {
                         <label className="block text-sm font-medium">Email</label>
                         <input
                             className="w-full rounded-lg border px-3 py-2"
-                            placeholder="name@sofkam.com"
+                            placeholder="name@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />

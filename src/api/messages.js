@@ -1,4 +1,5 @@
 import { getToken } from "../auth/token";
+import { API_BASE_URL } from "../config";
 
 function authHeaders() {
     const token = getToken();
@@ -6,14 +7,14 @@ function authHeaders() {
 }
 
 export async function getInbox() {
-    const res = await fetch("/api/v1/messages/inbox", { headers: authHeaders() });
+    const res = await fetch(`${API_BASE_URL}/api/v1/messages/inbox`, { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to load inbox");
     return data.items;
 }
 
 export async function getGroupMessages(groupId) {
-    const res = await fetch(`/api/v1/messages/groups/${groupId}`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/messages/groups/${groupId}`, {
         headers: authHeaders(),
     });
     const data = await res.json();
@@ -22,7 +23,7 @@ export async function getGroupMessages(groupId) {
 }
 
 // export async function sendGroupMessage(groupId, text) {
-//     const res = await fetch(`/api/v1/messages/groups/${groupId}`, {
+//     const res = await fetch(`${API_BASE_URL}/api/v1/messages/groups/${groupId}`, {
 //         method: "POST",
 //         headers: { ...authHeaders(), "Content-Type": "application/json" },
 //         body: JSON.stringify({ text }),
@@ -32,7 +33,7 @@ export async function getGroupMessages(groupId) {
 //     return data.message;
 // }
 export async function sendGroupMessage(groupId, text) {
-    const res = await fetch(`/api/v1/messages/groups/${groupId}`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/messages/groups/${groupId}`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
@@ -46,7 +47,7 @@ export async function sendGroupMessage(groupId, text) {
 }
 
 export async function getDirectMessages(threadId) {
-    const res = await fetch(`/api/v1/messages/direct/${threadId}`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/messages/direct/${threadId}`, {
         headers: authHeaders(),
     });
     const data = await res.json();
@@ -55,7 +56,7 @@ export async function getDirectMessages(threadId) {
 }
 
 // export async function sendDirectMessage(toEmail, text) {
-//     const res = await fetch(`/api/v1/messages/direct`, {
+//     const res = await fetch(`${API_BASE_URL}/api/v1/messages/direct`, {
 //         method: "POST",
 //         headers: { ...authHeaders(), "Content-Type": "application/json" },
 //         body: JSON.stringify({ toEmail, text }),
@@ -66,7 +67,7 @@ export async function getDirectMessages(threadId) {
 // }
 
 export async function sendDirectMessage(toEmail, text) {
-    const res = await fetch(`/api/v1/messages/direct`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/messages/direct`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ toEmail, text }),
@@ -80,7 +81,7 @@ export async function sendDirectMessage(toEmail, text) {
 }
 
 export async function markSeen(scope, chatId) {
-    const res = await fetch(`/api/v1/messages/seen`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/messages/seen`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ scope, chatId }),
