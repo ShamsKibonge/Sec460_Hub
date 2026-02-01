@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 # Sec460_Hub
+
+# Getting Started with Create React App
+=======
+# Getting Started with Create React App
+>>>>>>> fe886dec86d237047af480ab95c8a22f771cda5b
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
