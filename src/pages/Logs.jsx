@@ -34,6 +34,8 @@ export default function Logs() {
     }, [logs]);
 
     const filteredLogs = useMemo(() => {
+        const filterDateStr = dateFilter ? new Date(dateFilter).toLocaleDateString() : null;
+
         return logs.filter(log => {
             const actor = formatUser({ email: log.actorEmail, alias: log.actorAlias }) || "";
             const target = formatUser({ email: log.targetEmail, alias: log.targetAlias }) || "";
@@ -46,7 +48,7 @@ export default function Logs() {
             const activityMatch = activityTypeFilter ? log.activityType === activityTypeFilter : true;
             
             const dateMatch = dateFilter ? 
-                new Date(log.createdAt).toLocaleDateString() === new Date(dateFilter).toLocaleDateString() : 
+                new Date(log.createdAt).toLocaleDateString() === filterDateStr :
                 true;
 
             return userMatch && activityMatch && dateMatch;
