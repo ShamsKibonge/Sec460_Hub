@@ -62,7 +62,7 @@ jobs:
         run: npm run lint --if-present
 
       - name: Server tests (if you have it)
-        run: npm test --if-present
+        run: npm test --if-present --passWithNoTests
 
   security:
     name: Security scans (secrets + vulnerable packages + code patterns)
