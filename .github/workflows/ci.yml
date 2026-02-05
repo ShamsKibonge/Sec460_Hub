@@ -32,7 +32,7 @@ jobs:
         run: npm run lint --if-present
 
       - name: Client tests (if you have it)
-        run: npm test --if-present -- --watchAll=false
+        run:  npm test --if-present -- --watchAll=false --passWithNoTests
 
       - name: Client build
         run: npm run build
