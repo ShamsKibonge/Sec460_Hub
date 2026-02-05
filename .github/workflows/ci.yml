@@ -92,3 +92,5 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: p/default
+        env:
+          SEMGREP_IGNORE: .semgrepignore
