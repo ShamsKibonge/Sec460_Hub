@@ -2,7 +2,6 @@
   "name": "client-react",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://ShamsKibonge.github.io/Sec460_Hub/",
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@testing-library/dom": "^10.4.1",
