@@ -13,7 +13,9 @@ function safeJoin(baseDir, filename) {
     }
 
     // 2) Build absolute paths and verify it stays inside baseDir
+    // semgrep-disable-next-line javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const base = path.resolve(baseDir);
+    // semgrep-disable-next-line javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const target = path.resolve(baseDir, baseName);
 
     if (!target.startsWith(base + path.sep)) {

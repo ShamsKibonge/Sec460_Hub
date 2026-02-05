@@ -7,15 +7,33 @@ function formatUser(user) {
     return user.alias ? `${user.email} (${user.alias})` : user.email;
 }
 
-function escapeRegExp(str = "") {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function splitAndKeep(text = "", term = "") {
+    if (!term) return [text];
+
+    const lowerText = text.toLowerCase();
+    const lowerTerm = term.toLowerCase();
+
+    const parts = [];
+    let i = 0;
+
+    while (true) {
+        const idx = lowerText.indexOf(lowerTerm, i);
+        if (idx === -1) {
+            parts.push(text.slice(i));
+            break;
+        }
+        if (idx > i) parts.push(text.slice(i, idx));
+        parts.push(text.slice(idx, idx + term.length)); // the match
+        i = idx + term.length;
+    }
+
+    return parts.filter(p => p !== "");
 }
 
 function Highlight({ text, highlight }) {
     if (!text) return "";
     if (!highlight) return text;
-    const safe = escapeRegExp(highlight);
-    const parts = text.split(new RegExp(`(${safe})`, "gi"));
+    const parts = splitAndKeep(text, highlight);
     return (
         <span>
             {parts.map((part, i) =>
