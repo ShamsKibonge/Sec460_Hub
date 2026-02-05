@@ -7,10 +7,15 @@ function formatUser(user) {
     return user.alias ? `${user.email} (${user.alias})` : user.email;
 }
 
+function escapeRegExp(str = "") {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function Highlight({ text, highlight }) {
     if (!text) return "";
     if (!highlight) return text;
-    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    const safe = escapeRegExp(highlight);
+    const parts = text.split(new RegExp(`(${safe})`, "gi"));
     return (
         <span>
             {parts.map((part, i) =>
@@ -118,8 +123,8 @@ export default function Monitor() {
                 {selectedChat ? (
                     <>
                         <div className="border-b pb-2 mb-2">
-                             <h2 className="text-xl font-bold">Conversation: {selectedChat.name}</h2>
-                             <div className="flex items-center gap-2 mt-2">
+                            <h2 className="text-xl font-bold">Conversation: {selectedChat.name}</h2>
+                            <div className="flex items-center gap-2 mt-2">
                                 <input
                                     type="text"
                                     placeholder="Search in conversation..."
@@ -146,8 +151,8 @@ export default function Monitor() {
 
                         <ul className="overflow-y-auto flex-grow">
                             {messages.map((message, index) => (
-                                <li 
-                                    key={message.id} 
+                                <li
+                                    key={message.id}
                                     className={`mb-2 p-2 rounded-lg transition-colors ${matches[currentMatch] === index ? 'bg-blue-100 border border-blue-300' : ''}`}
                                     ref={el => messageRefs.current[index] = el}
                                 >

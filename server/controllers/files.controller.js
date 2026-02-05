@@ -3,6 +3,7 @@ import cuid from "cuid";
 import fs from "fs";
 import path from "path";
 import { getIO } from "../socket.js";
+import { safeJoin } from "../utils/safePath.js";
 
 async function requireGroupMember(groupId, userId) {
     const [rows] = await pool.execute(
@@ -44,7 +45,7 @@ export async function uploadToGroup(req, res) {
         // Using a transaction to ensure all or nothing
         const connection = await pool.getConnection();
         await connection.beginTransaction();
-        
+
         try {
             await connection.execute(
                 'INSERT INTO `File` (`id`, `originalName`, `mimeType`, `size`, `storageName`, `uploaderId`, `createdAt`, `updatedAt`) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())',
@@ -116,7 +117,7 @@ export async function uploadToThread(req, res) {
         const fileId = cuid();
         const messageId = cuid();
         const shareId = cuid();
-        
+
         const connection = await pool.getConnection();
         await connection.beginTransaction();
 
@@ -269,7 +270,7 @@ export async function downloadFile(req, res) {
     const file = fileRows[0];
     if (!file) return res.status(404).json({ ok: false, error: "File not found." });
 
-    const fullPath = path.join(process.cwd(), "uploads", file.storageName);
+    const fullPath = safeJoin(path.join(process.cwd(), "uploads"), file.storageName);
     if (!fs.existsSync(fullPath)) return res.status(404).json({ ok: false, error: "Missing on disk." });
 
     res.download(fullPath, file.originalName);

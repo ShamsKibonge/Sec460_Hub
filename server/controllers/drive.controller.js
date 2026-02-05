@@ -3,6 +3,7 @@ import cuid from "cuid";
 import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
+import { safeJoin } from "../utils/safePath.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -165,7 +166,7 @@ export async function downloadDriveFile(req, res) {
         return res.status(403).json({ ok: false, error: "Not allowed." });
     }
 
-    const fullPath = path.join(UPLOAD_DIR, f.storageName);
+    const fullPath = safeJoin(UPLOAD_DIR, f.storageName);
 
     try {
         await fs.access(fullPath);
@@ -194,7 +195,7 @@ export async function deleteFile(req, res) {
     await pool.execute('DELETE FROM `File` WHERE `id` = ?', [fileId]);
 
     try {
-        await fs.unlink(path.join(UPLOAD_DIR, file.storageName));
+        await fs.unlink(safeJoin(UPLOAD_DIR, file.storageName));
     } catch {
         // ignore if already missing
     }
