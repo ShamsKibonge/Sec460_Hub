@@ -4,7 +4,7 @@ import { getAllUsers, setUserAdminStatus, setUserActiveStatus } from "../api/use
 export default function Users() {
     const [users, setUsers] = useState([]);
     const [error, setError] = useState(null);
-
+    //new comments
     useEffect(() => {
         const fetchUsers = async () => {
             try {
@@ -67,22 +67,20 @@ export default function Users() {
                                     <button
                                         onClick={() => handleSetAdminStatus(user.id, !user.isAdmin)}
                                         disabled={user.isSuperAdmin}
-                                        className={`px-4 py-2 rounded ${
-                                            user.isAdmin
+                                        className={`px-4 py-2 rounded ${user.isAdmin
                                                 ? "bg-red-500 hover:bg-red-600"
                                                 : "bg-green-500 hover:bg-green-600"
-                                        } text-white mr-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            } text-white mr-2 disabled:opacity-50 disabled:cursor-not-allowed`}
                                     >
                                         {user.isSuperAdmin ? "Super Admin" : (user.isAdmin ? "Remove Admin" : "Make Admin")}
                                     </button>
                                     <button
                                         onClick={() => handleSetActiveStatus(user.id, !user.isActive)}
                                         disabled={user.isSuperAdmin}
-                                        className={`px-4 py-2 rounded ${
-                                            user.isActive
+                                        className={`px-4 py-2 rounded ${user.isActive
                                                 ? "bg-yellow-500 hover:bg-yellow-600"
                                                 : "bg-blue-500 hover:bg-blue-600"
-                                        } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
                                     >
                                         {user.isActive ? "Deactivate" : "Activate"}
                                     </button>
