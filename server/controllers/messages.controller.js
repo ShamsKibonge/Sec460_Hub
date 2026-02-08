@@ -2,6 +2,7 @@ import pool from "../db/mysql.js";
 import cuid from "cuid";
 import { getIO } from "../socket.js";
 import { markGroupSeen, markThreadSeen } from "../services/lastSeen.service.js";
+import { createMailer } from "../services/email.service.js";
 
 async function emitInboxUpdateForThread(threadId) {
     const io = getIO();
@@ -300,6 +301,9 @@ export async function postGroupMessage(req, res) {
     io.to(`group:${groupId}`).emit("message:new", { scope: "group", groupId, message: msg });
     await emitInboxUpdateForGroup(groupId);
 
+    // schedule unread reminder emails for group members
+    try { scheduleUnreadReminder('group', groupId, msg, msg.sender.id); } catch (e) { console.error(e); }
+
     res.json({ ok: true, message: msg });
 }
 
@@ -367,6 +371,9 @@ export async function sendDirectMessage(req, res) {
         const io = getIO();
         io.to(`thread:${thread.id}`).emit("message:new", { scope: "direct", threadId: thread.id, message: msg });
         await emitInboxUpdateForThread(thread.id);
+
+        // schedule unread reminder for the direct recipient
+        try { scheduleUnreadReminder('direct', thread.id, msg, msg.sender.id); } catch (e) { console.error(e); }
 
         res.json({ ok: true, threadId: thread.id, message: msg });
 
@@ -490,6 +497,9 @@ export async function attachFileToGroup(req, res) {
         io.to(`group:${groupId}`).emit("message:new", { scope: "group", groupId, message: msg });
         await emitInboxUpdateForGroup(groupId);
 
+        // schedule unread reminder emails for group members
+        try { scheduleUnreadReminder('group', groupId, msg, msg.sender.id); } catch (e) { console.error(e); }
+
         res.json({ ok: true, message: msg });
     } catch (e) {
         await connection.rollback();
@@ -549,6 +559,9 @@ export async function attachFileToThread(req, res) {
         io.to(`thread:${threadId}`).emit("message:new", { scope: "direct", threadId, message: msg });
         await emitInboxUpdateForThread(threadId);
 
+        // schedule unread reminder for thread recipient (file message)
+        try { scheduleUnreadReminder('direct', threadId, msg, msg.sender.id); } catch (e) { console.error(e); }
+
         res.json({ ok: true, message: msg });
     } catch (e) {
         await connection.rollback();
@@ -557,4 +570,108 @@ export async function attachFileToThread(req, res) {
     } finally {
         connection.release();
     }
+}
+
+// Schedule a reminder email 10 minutes after a message is created.
+// If the recipient hasn't seen the message by then, send a reminder email.
+function scheduleUnreadReminder(scope, id, message, senderId) {
+    // run after 1 minute (60000 ms) for testing — change to 10 minutes in production
+    setTimeout(async () => {
+        try {
+            const createdAt = message.createdAt;
+            const transporter = createMailer();
+
+            if (scope === "group") {
+                // get group members (exclude sender)
+                const [members] = await pool.execute('SELECT `userId` FROM `GroupMember` WHERE `groupId` = ?', [id]);
+                for (const m of members) {
+                    if (m.userId === senderId) continue;
+
+                    // check last seen
+                    const [seenRows] = await pool.execute('SELECT `lastSeenAt` FROM `ChatLastSeen` WHERE `userId` = ? AND `groupId` = ?', [m.userId, id]);
+                    const lastSeenAt = (seenRows[0] && seenRows[0].lastSeenAt) ? new Date(seenRows[0].lastSeenAt) : new Date(0);
+                    if (new Date(createdAt) <= lastSeenAt) continue; // already seen
+
+                    // fetch user email
+                    const [users] = await pool.execute('SELECT `email` FROM `User` WHERE `id` = ?', [m.userId]);
+                    const to = users[0]?.email;
+                    if (!to) continue;
+
+                    // construct links
+                    const portal = process.env.PORTAL_URL || `http://sec460.sofkam.com`;
+                    const apiBase = process.env.API_BASE_URL || portal.replace(/\/$/, '');
+                    const chatLink = `${portal}/messages?groupId=${encodeURIComponent(id)}`;
+                    const fileLink = message.file?.id ? `${apiBase}/api/v1/files/${message.file.id}/download` : null;
+
+                    const html = `
+                        <p>Hi,</p>
+                        <p>You have unread messages in a group.</p>
+                        <p><b>From:</b> ${message.sender?.alias || message.sender?.email || 'Someone'}</p>
+                        <p><b>Message:</b> ${message.text ? escapeHtml(message.text) : (message.file ? 'File attached' : '')}</p>
+                        <p><a href="${chatLink}">Open the conversation</a></p>
+                        ${fileLink ? `<p><a href="${fileLink}">Download attached file</a></p>` : ''}
+                        <p>If you don't want these reminders, adjust your notification settings in the portal.</p>
+                    `;
+
+                    await transporter.sendMail({
+                        from: process.env.EMAIL_USER,
+                        to,
+                        subject: `Unread messages in group`,
+                        html,
+                    });
+                }
+            } else if (scope === "direct") {
+                // get thread members
+                const [rows] = await pool.execute('SELECT `userAId`, `userBId` FROM `DirectThread` WHERE `id` = ?', [id]);
+                const t = rows[0];
+                if (!t) return;
+
+                const otherId = t.userAId === senderId ? t.userBId : t.userAId;
+                if (!otherId) return;
+
+                // check last seen for thread
+                const [seenRows] = await pool.execute('SELECT `lastSeenAt` FROM `ChatLastSeen` WHERE `userId` = ? AND `threadId` = ?', [otherId, id]);
+                const lastSeenAt = (seenRows[0] && seenRows[0].lastSeenAt) ? new Date(seenRows[0].lastSeenAt) : new Date(0);
+                if (new Date(createdAt) <= lastSeenAt) return; // already seen
+
+                const [users] = await pool.execute('SELECT `email` FROM `User` WHERE `id` = ?', [otherId]);
+                const to = users[0]?.email;
+                if (!to) return;
+
+                const portal = process.env.PORTAL_URL || `https://sec460.sofkam.com`;
+                const apiBase = process.env.API_BASE_URL || portal.replace(/\/$/, '');
+                const chatLink = `${portal}/messages?threadId=${encodeURIComponent(id)}`;
+                const fileLink = message.file?.id ? `${apiBase}/api/v1/files/${message.file.id}/download` : null;
+
+                const html = `
+                    <p>Hi,</p>
+                    <p>You have an unread message.</p>
+                    <p><b>From:</b> ${message.sender?.alias || message.sender?.email || 'Someone'}</p>
+                    <p><b>Message:</b> ${message.text ? escapeHtml(message.text) : (message.file ? 'File attached' : '')}</p>
+                    <p><a href="${chatLink}">Open the conversation</a></p>
+                    ${fileLink ? `<p><a href="${fileLink}">Download attached file</a></p>` : ''}
+                `;
+
+                await transporter.sendMail({
+                    from: process.env.EMAIL_USER,
+                    to,
+                    subject: `Unread message`,
+                    html,
+                });
+            }
+        } catch (e) {
+            console.error('Reminder email error', e);
+        }
+    }, 1 * 60 * 1000);
+}
+
+// simple HTML-escape helper for user message text to avoid breaking the email HTML
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }

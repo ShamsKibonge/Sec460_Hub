@@ -59,6 +59,50 @@ export default function Messages() {
 
     const [previewMime, setPreviewMime] = useState("");
 
+    const audioRef = useRef(null);
+
+    // Play a short notification sound. Tries an audio file at /notify.mp3 then falls back to WebAudio beep.
+    async function playNotificationSound() {
+        try {
+            if (audioRef.current) {
+                // try HTMLAudioElement first
+                try {
+                    audioRef.current.currentTime = 0;
+                } catch (_) { }
+                await audioRef.current.play();
+                return;
+            }
+        } catch (e) {
+            // ignore and fallback
+        }
+
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g);
+            g.connect(ctx.destination);
+            o.type = 'sine';
+            o.frequency.value = 1000;
+            g.gain.value = 0.04;
+            o.start();
+            setTimeout(() => { try { o.stop(); ctx.close(); } catch (_) { } }, 180);
+        } catch (e) {
+            // nothing else to do
+        }
+    }
+
+    function showBrowserNotification(title, body) {
+        try {
+            if (typeof Notification === 'undefined') return;
+            if (Notification.permission === 'granted') {
+                new Notification(title, { body });
+            }
+        } catch (e) { }
+    }
+
     const [driveOpen, setDriveOpen] = useState(false);
     const [driveQ, setDriveQ] = useState("");
     const [driveFiles, setDriveFiles] = useState([]);
@@ -390,7 +434,35 @@ export default function Messages() {
                     markSeen("direct", payload.threadId).catch(() => { });
                 }
             }
+
+            // Play sound / show notification when message is from someone else and
+            // either you're not inside that chat or the window is not focused.
+            try {
+                const isFromMe = payload.message?.sender?.id === user?.id;
+                const inSameChat = (payload.scope === 'group' && selected?.type === 'group' && selected?.id === payload.groupId) ||
+                    (payload.scope === 'direct' && selected?.type === 'direct' && selected?.id === payload.threadId);
+
+                if (!isFromMe && (!inSameChat || document.hidden)) {
+                    const preview = payload.message?.kind === 'file' ? `📎 ${payload.message?.file?.originalName || 'File'}` : (payload.message?.text || 'New message');
+                    playNotificationSound();
+                    showBrowserNotification(payload.message?.sender?.alias || payload.message?.sender?.email || 'New message', preview);
+                }
+            } catch (e) { }
         };
+
+        // prepare audio element if file exists (optional)
+        try {
+            const a = new Audio('/notify.mp3');
+            a.preload = 'auto';
+            audioRef.current = a;
+        } catch (e) { audioRef.current = null; }
+
+        // request notification permission if default
+        try {
+            if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                Notification.requestPermission().catch(() => { });
+            }
+        } catch (e) { }
 
         s.on("inbox:update", onInboxUpdate);
         s.on("message:new", onNewMessage);
