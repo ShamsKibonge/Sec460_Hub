@@ -315,14 +315,7 @@ export async function sendDirectMessage(req, res) {
     if (!toEmail.includes("@")) return res.status(400).json({ ok: false, error: "Valid toEmail is required." });
     if (!text) return res.status(400).json({ ok: false, error: "Message text is required." });
 
-    const allowedDomain = (process.env.ALLOWED_DOMAIN || "").toLowerCase();
-    const domain = toEmail.split("@")[1] || "";
-    // Debug: log configured allowed domain and incoming recipient domain
-    console.log('sendDirectMessage: ALLOWED_DOMAIN=', process.env.ALLOWED_DOMAIN, 'toEmail=', toEmail, 'domain=', domain);
-
-    if (allowedDomain && domain.toLowerCase() !== allowedDomain) {
-        return res.status(403).json({ ok: false, error: "Email domain not allowed." });
-    }
+    // No domain restriction — all recipient emails allowed
 
     const connection = await pool.getConnection();
     try {

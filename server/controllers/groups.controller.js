@@ -102,12 +102,8 @@ export async function addMemberByEmail(req, res) {
     if (!me) return res.status(403).json({ ok: false, error: "Not a group member." });
     if (me.role !== "admin") return res.status(403).json({ ok: false, error: "Admin only." });
 
-    const allowed = (process.env.ALLOWED_DOMAIN || "").toLowerCase();
-    const domain = email.split("@")[1] || "";
-    if (allowed && domain.toLowerCase() !== allowed) {
-        return res.status(403).json({ ok: false, error: "Email domain not allowed." });
-    }
-    
+    // No domain restriction - allow any email
+
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
@@ -137,7 +133,7 @@ export async function addMemberByEmail(req, res) {
             }
             throw e;
         }
-        
+
         await connection.commit();
 
         await logActivity(userId, "GROUP_MEMBER_ADDED", { groupId, targetUserId: user.id });

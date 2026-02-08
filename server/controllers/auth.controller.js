@@ -7,7 +7,6 @@ import { logActivity } from "../services/activity.service.js";
 import {
     generate6DigitCode,
     hashCode,
-    isAllowedDomain,
     normalizeEmail,
     verifyCode,
 } from "../auth/otp.utils.js";
@@ -22,9 +21,6 @@ export async function requestCode(req, res) {
 
     if (!email || !email.includes("@")) {
         return res.status(400).json({ ok: false, error: "Valid email is required." });
-    }
-    if (!isAllowedDomain(email)) {
-        return res.status(403).json({ ok: false, error: "Email domain not allowed." });
     }
 
     const existing = otpStore.get(email);
@@ -61,9 +57,6 @@ export async function verifyCodeAndLogin(req, res) {
 
     if (!email || !code) {
         return res.status(400).json({ ok: false, error: "Email and code are required." });
-    }
-    if (!isAllowedDomain(email)) {
-        return res.status(403).json({ ok: false, error: "Email domain not allowed." });
     }
 
     const record = otpStore.get(email);
