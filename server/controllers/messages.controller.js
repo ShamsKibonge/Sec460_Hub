@@ -600,7 +600,7 @@ function scheduleUnreadReminder(scope, id, message, senderId) {
                     // construct links
                     const portal = process.env.PORTAL_URL || `http://sec460.sofkam.com`;
                     const apiBase = process.env.API_BASE_URL || portal.replace(/\/$/, '');
-                    const chatLink = `${portal}/messages?groupId=${encodeURIComponent(id)}`;
+                    const chatLink = `${portal}/messages`;
                     const fileLink = message.file?.id ? `${apiBase}/api/v1/files/${message.file.id}/download` : null;
 
                     const html = `
@@ -638,9 +638,9 @@ function scheduleUnreadReminder(scope, id, message, senderId) {
                 const to = users[0]?.email;
                 if (!to) return;
 
-                const portal = process.env.PORTAL_URL || `https://sec460.sofkam.com`;
+                const portal = process.env.PORTAL_URL || `http://sec460.sofkam.com`;
                 const apiBase = process.env.API_BASE_URL || portal.replace(/\/$/, '');
-                const chatLink = `${portal}/messages?threadId=${encodeURIComponent(id)}`;
+                const chatLink = `${portal}/messages`;
                 const fileLink = message.file?.id ? `${apiBase}/api/v1/files/${message.file.id}/download` : null;
 
                 const html = `

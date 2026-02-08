@@ -63,22 +63,30 @@ export default function Messages() {
 
     // Play a short notification sound. Tries an audio file at /notify.mp3 then falls back to WebAudio beep.
     async function playNotificationSound() {
+        console.log('[Notification] Attempting to play sound...');
+
         try {
             if (audioRef.current) {
                 // try HTMLAudioElement first
                 try {
                     audioRef.current.currentTime = 0;
                 } catch (_) { }
+                console.log('[Notification] Playing audio file...');
                 await audioRef.current.play();
                 return;
             }
         } catch (e) {
-            // ignore and fallback
+            console.log('[Notification] Audio file play failed:', e.message);
         }
 
         try {
+            console.log('[Notification] Falling back to WebAudio beep...');
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (!AudioCtx) return;
+            if (!AudioCtx) {
+                console.log('[Notification] AudioContext not available');
+                return;
+            }
+
             const ctx = new AudioCtx();
             const o = ctx.createOscillator();
             const g = ctx.createGain();
@@ -86,21 +94,37 @@ export default function Messages() {
             g.connect(ctx.destination);
             o.type = 'sine';
             o.frequency.value = 1000;
-            g.gain.value = 0.04;
-            o.start();
-            setTimeout(() => { try { o.stop(); ctx.close(); } catch (_) { } }, 180);
+            g.gain.value = 0.1;
+            o.start(ctx.currentTime);
+            o.stop(ctx.currentTime + 0.2);
+            console.log('[Notification] WebAudio beep played');
         } catch (e) {
-            // nothing else to do
+            console.log('[Notification] WebAudio failed:', e.message);
         }
     }
 
     function showBrowserNotification(title, body) {
         try {
-            if (typeof Notification === 'undefined') return;
-            if (Notification.permission === 'granted') {
-                new Notification(title, { body });
+            if (typeof Notification === 'undefined') {
+                console.log('[Notification] Notification API not available');
+                return;
             }
-        } catch (e) { }
+
+            if (Notification.permission === 'granted') {
+                console.log('[Notification] Showing browser notification:', title);
+                const notif = new Notification(title, {
+                    body,
+                    icon: '/favicon.ico',
+                    requireInteraction: true
+                });
+                // Close after 5 seconds
+                setTimeout(() => notif.close?.(), 5000);
+            } else {
+                console.log('[Notification] Notification permission not granted:', Notification.permission);
+            }
+        } catch (e) {
+            console.log('[Notification] Browser notification error:', e.message);
+        }
     }
 
     const [driveOpen, setDriveOpen] = useState(false);
@@ -454,15 +478,32 @@ export default function Messages() {
         try {
             const a = new Audio('/notify.mp3');
             a.preload = 'auto';
+            a.crossOrigin = 'anonymous';
+            a.onerror = () => {
+                console.log('[Notification] Audio file /notify.mp3 not found, will use WebAudio');
+                audioRef.current = null;
+            };
+            a.oncanplay = () => {
+                console.log('[Notification] Audio file loaded successfully');
+            };
             audioRef.current = a;
-        } catch (e) { audioRef.current = null; }
+            console.log('[Notification] Audio element created');
+        } catch (e) {
+            console.log('[Notification] Audio initialization error:', e.message);
+            audioRef.current = null;
+        }
 
         // request notification permission if default
         try {
             if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-                Notification.requestPermission().catch(() => { });
+                console.log('[Notification] Requesting notification permission...');
+                Notification.requestPermission().then(result => {
+                    console.log('[Notification] Permission result:', result);
+                }).catch(() => { });
             }
-        } catch (e) { }
+        } catch (e) {
+            console.log('[Notification] Permission request error:', e.message);
+        }
 
         s.on("inbox:update", onInboxUpdate);
         s.on("message:new", onNewMessage);
