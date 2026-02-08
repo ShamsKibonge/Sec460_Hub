@@ -471,7 +471,7 @@ export default function Messages() {
             s.off("inbox:update", onInboxUpdate);
             s.off("message:new", onNewMessage);
         };
-    }, [selected, loadInbox]);
+    }, [selected, loadInbox, user?.id]);
 
 
 
