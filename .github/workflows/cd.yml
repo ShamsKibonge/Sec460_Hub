@@ -38,7 +38,7 @@ jobs:
           port: 21
           protocol: ftp
           local-dir: client/build/
-          server-dir: /home/sofkam/sec460.sofkam.com/
+          server-dir: /
           dangerous-clean-slate: false
 
   deploy_server:
@@ -57,7 +57,7 @@ jobs:
           port: 21
           protocol: ftp
           local-dir: server/
-          server-dir: /home/sofkam/nodejs/hub/
+          server-dir: /
           dangerous-clean-slate: false
           exclude: |
             **/node_modules/**
