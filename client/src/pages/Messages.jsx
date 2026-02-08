@@ -540,11 +540,16 @@ export default function Messages() {
             }
         } catch (e) {
             console.log('[Notification] Permission check error:', e.message);
-            return () => {
-                s.off("inbox:update", onInboxUpdate);
-                s.off("message:new", onNewMessage);
-            };
-        }, [selected, loadInbox, user?.id]);
+        }
+
+        s.on("inbox:update", onInboxUpdate);
+        s.on("message:new", onNewMessage);
+
+        return () => {
+            s.off("inbox:update", onInboxUpdate);
+            s.off("message:new", onNewMessage);
+        };
+    }, [selected, loadInbox, user?.id]);
 
 
 
