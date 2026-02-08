@@ -30,14 +30,8 @@ app.get("/health", (req, res) => {
 app.use("/api/v1", v1Routes);
 
 
-// 2) Serve frontend build
-app.use(express.static(path.join(__dirname, "..", "client", "build"))); // CRA uses "build" by default
-
-// 3) Handle React Routing (for non-API requests)
-// Use a regex catch-all to avoid path-to-regexp parsing errors ("*")
-app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"));
-});
+// NOTE: Client build is served separately in production (e.g. via webserver/host).
+// The API should only expose endpoints. Removed serving of ../client/build to avoid ENOENT in deployed hosts.
 
 
 app.use((err, req, res, next) => {
