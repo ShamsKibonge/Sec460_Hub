@@ -458,6 +458,20 @@ export default function Messages() {
             loadInbox(); // reorder + unread badge
         };
 
+        // debug socket connection state
+        try {
+            if (!s) {
+                console.log('[Notification] Socket not initialized (no token or not connected)');
+            } else {
+                console.log('[Notification] Socket object:', { id: s.id, connected: s.connected });
+                s.on('connect', () => console.log('[Notification] socket connected:', s.id));
+                s.on('disconnect', (reason) => console.log('[Notification] socket disconnected:', reason));
+                s.on('connect_error', (err) => console.log('[Notification] socket connect_error (client):', err?.message || err));
+            }
+        } catch (e) {
+            console.log('[Notification] Error inspecting socket:', e);
+        }
+
         const onNewMessage = (payload) => {
             console.log('[Notification] Message received:', payload);
             // only append if you're INSIDE that same chat

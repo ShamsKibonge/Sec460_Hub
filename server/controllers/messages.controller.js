@@ -572,10 +572,10 @@ export async function attachFileToThread(req, res) {
     }
 }
 
-// Schedule a reminder email 10 minutes after a message is created.
+// Schedule a reminder email 5 minutes after a message is created.
 // If the recipient hasn't seen the message by then, send a reminder email.
 function scheduleUnreadReminder(scope, id, message, senderId) {
-    // run after 1 minute (60000 ms) for testing — change to 10 minutes in production
+    // run after 5 minutes (300000 ms)
     setTimeout(async () => {
         try {
             const createdAt = message.createdAt;
@@ -662,7 +662,7 @@ function scheduleUnreadReminder(scope, id, message, senderId) {
         } catch (e) {
             console.error('Reminder email error', e);
         }
-    }, 1 * 60 * 1000);
+    }, 5 * 60 * 1000);
 }
 
 // simple HTML-escape helper for user message text to avoid breaking the email HTML
