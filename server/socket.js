@@ -6,7 +6,8 @@ import pool from "./db/mysql.js";
 let io;
 
 export function initSocket(httpServer) {
-    io = new Server(httpServer, { cors: { origin: true, credentials: true } });
+    // Use the API-prefixed path so reverse proxies and clients using `/api/socket.io` work
+    io = new Server(httpServer, { path: "/api/socket.io", cors: { origin: true, credentials: true } });
 
     io.use((socket, next) => {
         try {
