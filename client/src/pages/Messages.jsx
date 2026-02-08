@@ -72,7 +72,12 @@ export default function Messages() {
                     audioRef.current.currentTime = 0;
                 } catch (_) { }
                 console.log('[Notification] Playing audio file...');
-                await audioRef.current.play();
+                const playPromise = audioRef.current.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => {
+                        console.log('[Notification] Audio play() rejected:', err.message);
+                    });
+                }
                 return;
             }
         } catch (e) {
@@ -88,15 +93,29 @@ export default function Messages() {
             }
 
             const ctx = new AudioCtx();
+
+            // Resume context if suspended (required on some browsers)
+            if (ctx.state === 'suspended') {
+                console.log('[Notification] AudioContext is suspended, attempting to resume...');
+                try {
+                    await ctx.resume();
+                    console.log('[Notification] AudioContext resumed');
+                } catch (resumeErr) {
+                    console.log('[Notification] Could not resume AudioContext:', resumeErr.message);
+                }
+            }
+
             const o = ctx.createOscillator();
             const g = ctx.createGain();
             o.connect(g);
             g.connect(ctx.destination);
             o.type = 'sine';
             o.frequency.value = 1000;
-            g.gain.value = 0.1;
+            g.gain.setValueAtTime(0.3, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
             o.start(ctx.currentTime);
-            o.stop(ctx.currentTime + 0.2);
+            o.stop(ctx.currentTime + 0.3);
             console.log('[Notification] WebAudio beep played');
         } catch (e) {
             console.log('[Notification] WebAudio failed:', e.message);
@@ -440,6 +459,7 @@ export default function Messages() {
         };
 
         const onNewMessage = (payload) => {
+            console.log('[Notification] Message received:', payload);
             // only append if you're INSIDE that same chat
             if (payload.scope === "group") {
                 if (selected?.type === "group" && selected.id === payload.groupId) {
@@ -466,12 +486,17 @@ export default function Messages() {
                 const inSameChat = (payload.scope === 'group' && selected?.type === 'group' && selected?.id === payload.groupId) ||
                     (payload.scope === 'direct' && selected?.type === 'direct' && selected?.id === payload.threadId);
 
+                console.log('[Notification] Checking notification:', { isFromMe, inSameChat, hidden: document.hidden });
+
                 if (!isFromMe && (!inSameChat || document.hidden)) {
+                    console.log('[Notification] Triggering notification...');
                     const preview = payload.message?.kind === 'file' ? `📎 ${payload.message?.file?.originalName || 'File'}` : (payload.message?.text || 'New message');
                     playNotificationSound();
                     showBrowserNotification(payload.message?.sender?.alias || payload.message?.sender?.email || 'New message', preview);
                 }
-            } catch (e) { }
+            } catch (e) {
+                console.log('[Notification] Error in notification logic:', e);
+            }
         };
 
         // prepare audio element if file exists (optional)
@@ -479,40 +504,47 @@ export default function Messages() {
             const a = new Audio('/notify.mp3');
             a.preload = 'auto';
             a.crossOrigin = 'anonymous';
-            a.onerror = () => {
-                console.log('[Notification] Audio file /notify.mp3 not found, will use WebAudio');
+            a.volume = 1;
+            a.onerror = (e) => {
+                console.log('[Notification] Audio file /notify.mp3 error:', a.error?.code, e);
                 audioRef.current = null;
             };
             a.oncanplay = () => {
                 console.log('[Notification] Audio file loaded successfully');
             };
+            a.onloadeddata = () => {
+                console.log('[Notification] Audio data loaded');
+            };
             audioRef.current = a;
-            console.log('[Notification] Audio element created');
+            console.log('[Notification] Audio element created, attempting to load /notify.mp3');
         } catch (e) {
             console.log('[Notification] Audio initialization error:', e.message);
             audioRef.current = null;
         }
 
-        // request notification permission if default
+        // request notification permission - MUST happen after user interaction on https
         try {
+            console.log('[Notification] Current permission state:', Notification.permission);
             if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
                 console.log('[Notification] Requesting notification permission...');
                 Notification.requestPermission().then(result => {
                     console.log('[Notification] Permission result:', result);
-                }).catch(() => { });
+                    console.log('[Notification] New permission state:', Notification.permission);
+                }).catch((err) => {
+                    console.log('[Notification] Permission request failed:', err);
+                });
+            } else if (Notification.permission === 'granted') {
+                console.log('[Notification] Notification permission already granted');
+            } else {
+                console.log('[Notification] Notification permission denied or unavailable');
             }
         } catch (e) {
-            console.log('[Notification] Permission request error:', e.message);
-        }
-
-        s.on("inbox:update", onInboxUpdate);
-        s.on("message:new", onNewMessage);
-
-        return () => {
-            s.off("inbox:update", onInboxUpdate);
-            s.off("message:new", onNewMessage);
-        };
-    }, [selected, loadInbox, user?.id]);
+            console.log('[Notification] Permission check error:', e.message);
+            return () => {
+                s.off("inbox:update", onInboxUpdate);
+                s.off("message:new", onNewMessage);
+            };
+        }, [selected, loadInbox, user?.id]);
 
 
 
