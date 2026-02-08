@@ -9,5 +9,5 @@ const server = http.createServer(app);
 initSocket(server);
 
 server.listen(PORT, () => {
-    console.log(`API listening on http://localhost:${PORT}`);
+    console.log(`[${new Date().toISOString()}] API listening on http://localhost:${PORT}`);
 });
