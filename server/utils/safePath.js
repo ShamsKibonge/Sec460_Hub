@@ -1,7 +1,7 @@
 /* semgrep-disable javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal */
-const path = require("path");
+import path from "path";
 
-function safeJoin(baseDir, filename) {
+export function safeJoin(baseDir, filename) {
     // 1) Only allow a simple filename (no folders)
     const baseName = path.basename(filename);
 
@@ -26,4 +26,4 @@ function safeJoin(baseDir, filename) {
     return target;
 }
 
-module.exports = { safeJoin };
+export default { safeJoin };
