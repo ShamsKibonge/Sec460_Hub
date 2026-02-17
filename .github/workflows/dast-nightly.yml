@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Check API health
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://sec460.sofkam.com/api/v1/health")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://sec460.sofkam.com/api/v1/health")
           if [ "$STATUS" = "200" ]; then
             echo "✅ API is healthy ($STATUS)"
           else
@@ -43,7 +43,7 @@ jobs:
             exit 1
           fi
 
-          RESPONSE=$(curl -s -X POST "https://sec460.sofkam.com/api/v1/auth/request-code" \
+          RESPONSE=$(curl -s -X POST "http://sec460.sofkam.com/api/v1/auth/request-code" \
             -H "Content-Type: application/json" \
             -H "X-DAST-KEY: ${DAST_KEY}" \
             -d "{\"email\":\"${DAST_EMAIL}\",\"password\":\"${DAST_PASSWORD}\"}")
@@ -64,7 +64,7 @@ jobs:
         env:
           DAST_JWT: ${{ steps.get_token.outputs.token }}
         with:
-          target: "https://sec460.sofkam.com/api/v1"
+          target: "http://sec460.sofkam.com/api/v1"
           cmd_options: >
             -j -m 7 -T 10
             -z "-config replacer.full_list(0).description=auth
@@ -110,7 +110,7 @@ jobs:
       - name: Run OWASP ZAP baseline scan on frontend (gentle)
         uses: zaproxy/action-baseline@v0.13.0
         with:
-          target: "https://sec460.sofkam.com"
+          target: "http://sec460.sofkam.com"
           cmd_options: >
             -j -m 5 -T 10
         continue-on-error: true
