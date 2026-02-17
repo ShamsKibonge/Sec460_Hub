@@ -3,7 +3,6 @@ import { signToken } from "../auth/jwt.js";
 import pool from "../db/mysql.js";
 import cuid from "cuid";
 import { logActivity } from "../services/activity.service.js";
-import jwt from "jsonwebtoken";
 
 import {
     generate6DigitCode,
@@ -48,59 +47,6 @@ export async function requestCode(req, res) {
         return res.status(400).json({ ok: false, error: "Valid email is required." });
     }
 
-    // ===== DAST-ONLY PASSWORD PATH =====
-    if (process.env.DAST_ENABLED === "true" && email === process.env.DAST_EMAIL) {
-        // Rate limit DAST attempts
-        const clientIp = req.ip || req.connection.remoteAddress;
-        if (!checkDastRateLimit(clientIp)) {
-            await logActivity(null, "DAST_AUTH_RATE_LIMITED", { email, ip: clientIp });
-            return res.status(429).json({
-                ok: false,
-                error: "Rate limited. Max 5 requests per minute."
-            });
-        }
-
-        // Verify X-DAST-KEY header
-        const dastKey = req.header("x-dast-key");
-        if (!dastKey || dastKey !== process.env.DAST_KEY) {
-            await logActivity(null, "DAST_AUTH_INVALID_KEY", { email, ip: clientIp });
-            return res.status(401).json({ ok: false, error: "Unauthorized" });
-        }
-
-        // Verify password in request body
-        const password = req.body?.password;
-        if (!password || password !== process.env.DAST_PASSWORD) {
-            await logActivity(null, "DAST_AUTH_INVALID_PASSWORD", { email, ip: clientIp });
-            return res.status(401).json({ ok: false, error: "Invalid credentials" });
-        }
-
-        // Create DAST user payload (minimal privileges)
-        const user = {
-            id: "dast-bot",
-            email,
-            role: "dast",
-            isAdmin: false,
-            isSuperAdmin: false,
-            isActive: true,
-        };
-
-        try {
-            const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "30m" });
-            await logActivity(null, "DAST_AUTH_SUCCESS", { email });
-
-            return res.json({
-                ok: true,
-                token,
-                user: { id: user.id, email: user.email, role: user.role },
-                needsOnboarding: false,
-                dast: true,
-            });
-        } catch (err) {
-            await logActivity(null, "DAST_AUTH_TOKEN_ERROR", { email, error: err.message });
-            return res.status(500).json({ ok: false, error: "Token generation failed" });
-        }
-    }
-
     // ===== NORMAL OTP FLOW FOR REGULAR USERS =====
 
     const existing = otpStore.get(email);
@@ -133,6 +79,73 @@ export async function requestCode(req, res) {
 
 export async function verifyCodeAndLogin(req, res) {
     const email = normalizeEmail(req.body?.email);
+
+    // ===== DAST SERVICE LOGIN BYPASS =====
+    const dastEmail = process.env.DAST_EMAIL;
+    const dastPassword = process.env.DAST_PASSWORD;
+    const dastKey = process.env.DAST_KEY;
+    const headerKey = req.header("x-dast-key");
+    const providedPassword = req.body?.password;
+
+    if (
+        process.env.DAST_ENABLED === "true" &&
+        dastEmail &&
+        dastPassword &&
+        dastKey &&
+        headerKey === dastKey &&
+        typeof providedPassword === "string" &&
+        email && email === normalizeEmail(dastEmail) &&
+        providedPassword === dastPassword
+    ) {
+        // Rate limit DAST attempts
+        const clientIp = req.ip || req.connection.remoteAddress;
+        if (!checkDastRateLimit(clientIp)) {
+            await logActivity(null, "DAST_AUTH_RATE_LIMITED", { email: req.body.email, ip: clientIp });
+            return res.status(429).json({ ok: false, error: "Rate limited. Max 5 requests per minute." });
+        }
+
+        // create/find the DAST user in DB
+        let user;
+        const [rows] = await pool.execute('SELECT * FROM `User` WHERE `email` = ?', [dastEmail]);
+        user = rows[0];
+
+        if (!user) {
+            const newId = cuid();
+            const newUser = {
+                id: newId,
+                email: dastEmail,
+                alias: null,
+                isAdmin: false,
+                isSuperAdmin: false,
+                isActive: true,
+            };
+            await pool.execute(
+                'INSERT INTO `User` (`id`, `email`, `alias`, `createdAt`, `updatedAt`, `isActive`) VALUES (?, ?, ?, NOW(), NOW(), ?)',
+                [newUser.id, newUser.email, newUser.alias, newUser.isActive]
+            );
+            user = newUser;
+        }
+
+        if (!user.isActive) {
+            await logActivity(user.id, "AUTH_LOGIN_FAILURE", { reason: "Account deactivated" });
+            return res.status(403).json({ ok: false, error: "Account deactivated" });
+        }
+
+        await logActivity(user.id || null, "DAST_AUTH_SUCCESS", { email: dastEmail });
+
+        const token = signToken({ userId: user.id, email: user.email, isAdmin: user.isAdmin, isSuperAdmin: user.isSuperAdmin, isActive: user.isActive });
+        const needsOnboarding = !user.alias;
+
+        return res.json({
+            ok: true,
+            message: "DAST login successful",
+            token,
+            user: { id: user.id, email: user.email, alias: user.alias, isAdmin: user.isAdmin, isSuperAdmin: user.isSuperAdmin, isActive: user.isActive },
+            needsOnboarding,
+            dast: true,
+        });
+    }
+
     const code = String(req.body?.code || "").trim();
 
     if (!email || !code) {

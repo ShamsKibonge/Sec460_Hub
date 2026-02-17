@@ -28,22 +28,70 @@ jobs:
             exit 1
           fi
 
-  zap_api:
-    name: ZAP Baseline - API (Unauthenticated)
+  zap_api_auth:
+    name: ZAP Baseline (JWT) - API
     needs: health_check
     runs-on: ubuntu-latest
     steps:
-      - name: Run ZAP baseline scan (API)
+      - name: Test DAST login only
+        run: |
+          RESPONSE=$(curl -s -X POST "http://sec460.sofkam.com/api/v1/auth/verify-code" \
+            -H "Content-Type: application/json" \
+            -H "X-DAST-KEY: ${{ secrets.DAST_KEY }}" \
+            -d "{\"email\":\"${{ secrets.DAST_EMAIL }}\",\"password\":\"${{ secrets.DAST_PASSWORD }}\"}")
+
+          echo "Response:"
+          echo "$RESPONSE"
+
+      - name: Get JWT for DAST user (no OTP)
+        id: get_token
+        env:
+          DAST_EMAIL: ${{ secrets.DAST_EMAIL }}
+          DAST_PASSWORD: ${{ secrets.DAST_PASSWORD }}
+          DAST_KEY: ${{ secrets.DAST_KEY }}
+        run: |
+          set -e
+          if [ -z "$DAST_EMAIL" ] || [ -z "$DAST_PASSWORD" ] || [ -z "$DAST_KEY" ]; then
+            echo "::error::Missing secrets: DAST_EMAIL, DAST_PASSWORD, DAST_KEY"
+            exit 1
+          fi
+
+          # We call verify-code directly using email+password (DAST bypass)
+          RESPONSE=$(curl -s -X POST "http://sec460.sofkam.com/api/v1/auth/verify-code" \
+            -H "Content-Type: application/json" \
+            -H "X-DAST-KEY: ${DAST_KEY}" \
+            -d "{\"email\":\"${DAST_EMAIL}\",\"password\":\"${DAST_PASSWORD}\"}")
+
+          TOKEN=$(echo "$RESPONSE" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("token",""))' || true)
+
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Failed to obtain JWT. Response was:"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "✅ DAST JWT acquired"
+
+      - name: Run OWASP ZAP baseline scan (API w/ JWT)
         uses: zaproxy/action-baseline@v0.13.0
+        env:
+          DAST_JWT: ${{ steps.get_token.outputs.token }}
         with:
-          # IMPORTANT: use an endpoint that returns 200
+          # Start at a 200 endpoint to avoid the /api/v1 404 complaint
           target: "http://sec460.sofkam.com/api/v1/health"
 
-          # Gentle settings
+          # Gentle settings for prod
           cmd_options: >
             -j -m 7 -T 10
+            -z "-config replacer.full_list(0).description=auth
+                -config replacer.full_list(0).enabled=true
+                -config replacer.full_list(0).matchtype=REQ_HEADER
+                -config replacer.full_list(0).matchstr=Authorization
+                -config replacer.full_list(0).regex=false
+                -config replacer.full_list(0).replacement=Bearer%20${DAST_JWT}"
 
-          # IMPORTANT: avoid GitHub issue creation (fixes the 403)
+          # Prevent the 403 issue creation error
           allow_issue_writing: false
 
         continue-on-error: true
@@ -51,7 +99,7 @@ jobs:
       - name: Upload ZAP reports (API)
         uses: actions/upload-artifact@v4
         with:
-          name: zap-prod-api-nightly-${{ github.run_number }}
+          name: zap-prod-api-auth-nightly-${{ github.run_number }}
           path: |
             report_html.html
             report_json.json
@@ -63,14 +111,13 @@ jobs:
     needs: health_check
     runs-on: ubuntu-latest
     steps:
-      - name: Run ZAP baseline scan (Frontend)
+      - name: Run OWASP ZAP baseline scan (Frontend)
         uses: zaproxy/action-baseline@v0.13.0
         with:
           target: "http://sec460.sofkam.com"
           cmd_options: >
             -j -m 5 -T 10
           allow_issue_writing: false
-
         continue-on-error: true
 
       - name: Upload ZAP reports (Frontend)
