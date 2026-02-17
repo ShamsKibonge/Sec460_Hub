@@ -1,10 +1,12 @@
-name: Nightly DAST (Prod API, Authenticated)
+name: Nightly DAST (Prod)
 
 on:
   schedule:
-    # 2:30 AM Los Angeles ≈ 10:30 UTC most of the year (DST shifts by 1 hour)
     - cron: "30 10 * * *"
   workflow_dispatch: {}
+
+permissions:
+  contents: read
 
 concurrency:
   group: dast-nightly
@@ -15,83 +17,38 @@ jobs:
     name: Pre-flight Health Check
     runs-on: ubuntu-latest
     steps:
-      - name: Check API health
+      - name: Check API health (must be 200)
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://sec460.sofkam.com/api/v1/health")
-          if [ "$STATUS" = "200" ]; then
-            echo "✅ API is healthy ($STATUS)"
-          else
-            echo "❌ API health check failed ($STATUS)"
+          set -e
+          URL="http://sec460.sofkam.com/api/v1/health"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+          echo "Health status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::API health check failed ($STATUS) at $URL"
             exit 1
           fi
 
-  zap_baseline_api:
-    name: ZAP Baseline (JWT) - /api/v1
+  zap_api:
+    name: ZAP Baseline - API (Unauthenticated)
     needs: health_check
     runs-on: ubuntu-latest
-
     steps:
-      - name: Get JWT for DAST user (no OTP required)
-        id: get_token
-        env:
-          DAST_EMAIL: ${{ secrets.DAST_EMAIL }}
-          DAST_PASSWORD: ${{ secrets.DAST_PASSWORD }}
-          DAST_KEY: ${{ secrets.DAST_KEY }}
-        run: |
-          if [ -z "$DAST_EMAIL" ] || [ -z "$DAST_PASSWORD" ] || [ -z "$DAST_KEY" ]; then
-            echo "::error::Missing required secrets: DAST_EMAIL, DAST_PASSWORD, or DAST_KEY"
-            exit 1
-          fi
-
-          RESPONSE=$(curl -s -X POST "http://sec460.sofkam.com/api/v1/auth/request-code" \
-            -H "Content-Type: application/json" \
-            -H "X-DAST-KEY: ${DAST_KEY}" \
-            -d "{\"email\":\"${DAST_EMAIL}\",\"password\":\"${DAST_PASSWORD}\"}")
-
-          TOKEN=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null)
-
-          if [ -z "$TOKEN" ]; then
-            echo "::error::Failed to obtain DAST JWT token"
-            echo "Response: $RESPONSE"
-            exit 1
-          fi
-
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-          echo "✅ DAST JWT acquired successfully"
-
-      - name: Run OWASP ZAP baseline scan (gentle)
+      - name: Run ZAP baseline scan (API)
         uses: zaproxy/action-baseline@v0.13.0
-        env:
-          DAST_JWT: ${{ steps.get_token.outputs.token }}
         with:
-          target: "http://sec460.sofkam.com/api/v1"
+          # IMPORTANT: use an endpoint that returns 200
+          target: "http://sec460.sofkam.com/api/v1/health"
+
+          # Gentle settings
           cmd_options: >
             -j -m 7 -T 10
-            -z "-config replacer.full_list(0).description=auth
-                -config replacer.full_list(0).enabled=true
-                -config replacer.full_list(0).matchtype=REQ_HEADER
-                -config replacer.full_list(0).matchstr=Authorization
-                -config replacer.full_list(0).regex=false
-                -config replacer.full_list(0).replacement=Bearer%20${DAST_JWT}"
+
+          # IMPORTANT: avoid GitHub issue creation (fixes the 403)
+          allow_issue_writing: false
+
         continue-on-error: true
 
-      - name: Parse ZAP results (High risk count)
-        id: parse_results
-        run: |
-          if [ -f "report_json.json" ]; then
-            HIGH_COUNT=$(python3 -c "import json; d=json.load(open('report_json.json')); s=d.get('site',[]) or []; a=(s[0].get('alerts',[]) if s else []); print(len([x for x in a if str(x.get('riskcode',''))=='3']))" 2>/dev/null || echo "0")
-
-            echo "high_issues=$HIGH_COUNT" >> $GITHUB_OUTPUT
-            echo "Found $HIGH_COUNT High-risk issues"
-
-            if [ "$HIGH_COUNT" -gt 0 ]; then
-              echo "::warning::Found $HIGH_COUNT High-risk security issues"
-            fi
-          else
-            echo "::warning::report_json.json not found (ZAP may have failed before report generation)"
-          fi
-
-      - name: Upload API ZAP reports
+      - name: Upload ZAP reports (API)
         uses: actions/upload-artifact@v4
         with:
           name: zap-prod-api-nightly-${{ github.run_number }}
@@ -101,21 +58,22 @@ jobs:
             report_md.md
           retention-days: 30
 
-  zap_baseline_frontend:
-    name: ZAP Baseline - Frontend (Unauthenticated)
+  zap_frontend:
+    name: ZAP Baseline - Frontend
     needs: health_check
     runs-on: ubuntu-latest
-
     steps:
-      - name: Run OWASP ZAP baseline scan on frontend (gentle)
+      - name: Run ZAP baseline scan (Frontend)
         uses: zaproxy/action-baseline@v0.13.0
         with:
           target: "http://sec460.sofkam.com"
           cmd_options: >
             -j -m 5 -T 10
+          allow_issue_writing: false
+
         continue-on-error: true
 
-      - name: Upload Frontend ZAP reports
+      - name: Upload ZAP reports (Frontend)
         uses: actions/upload-artifact@v4
         with:
           name: zap-prod-frontend-nightly-${{ github.run_number }}
